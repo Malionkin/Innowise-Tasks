@@ -1,23 +1,26 @@
 import json
 import pymysql
 import simplejson
+from quiries import main_quiries as mq
 
-rooms_data = open("rooms.json").read()
-rooms = json.loads(rooms_data)
-students_data = open("students.json").read()
-students = json.loads(students_data)
+with open("rooms.json") as rooms_data:
+    rooms = json.loads(rooms_data.read())
 
-con = pymysql.connect(host="localhost", user="root", password="", db="hostel")
+with open("students.json") as students_data:
+    students = json.loads(students_data.read())
+
+
 
 class DataBase():
+    con = pymysql.connect(host="localhost", user="root", password="", db="hostel")
 
     def fill_data(self):
-        cursor = con.cursor()
+        cursor = DataBase.con.cursor()
         for i in rooms:
             id = i.get("id")
             name = i.get("name")
             cursor.execute("insert into rooms(id, name) value(%s,%s)", (id, name))
-        con.commit()
+        DataBase.con.commit()
 
         for i in students:
             bday = i.get("birthday")
@@ -27,87 +30,68 @@ class DataBase():
             sex = i.get("sex")
             cursor.execute("insert into students(birthday, id, name, room, sex) value(%s,%s,%s,%s,%s)",
                            (bday, id, name, room, sex))
-        con.commit()
+        DataBase.con.commit()
 
-    def rooms_and_number_of_students(self):
-        with con.cursor() as cursor:
-            rooms_and_number_of_students = \
-                "select r.name, count(s.id) " \
-                "from hostel.rooms r join hostel.students s " \
-                "on r.id = s.room " \
-                "group by r.id;"
+
+    def rooms_and_number_of_students_query(self):
+        with DataBase.con.cursor() as cursor:
+            rooms_and_number_of_students = mq.COUNT_STUDENTS_QR
             cursor.execute(rooms_and_number_of_students)
             rows = cursor.fetchall()
-            result = dict(rows)
+        return dict(rows)
 
-            with open('count_students_in_room.json', 'w') as f:
-                simplejson.dump(result, f, indent=4)
-            con.commit()
+    def load_rooms_and_number_of_students_query(self):
+        with open('count_students_in_room.json', 'w') as f:
+            simplejson.dump(self.rooms_and_number_of_students_query(), f, indent=4)
+            DataBase.con.commit()
 
-    def five_young(self):
-        with con.cursor() as cursor:
-            age = \
-                "select" \
-                " s.room ," \
-                " avg(((YEAR(CURRENT_DATE) - YEAR(s.birthday)) - " \
-                "(DATE_FORMAT(CURRENT_DATE, '%m%d') < DATE_FORMAT(s.birthday, '%m%d')))) AS avg_age" \
-                " from hostel.rooms r join hostel.students s " \
-                "on r.id = s.room " \
-                "group by r.id " \
-                "order by avg_age" \
-                " limit 5;"
-
+    def five_young_query(self):
+        with DataBase.con.cursor() as cursor:
+            age = mq.FIVE_YOUNG_QR
             cursor.execute(age)
             rows = cursor.fetchall()
-            result = dict(rows)
+        return dict(rows)
 
-            with open('top_5_avg_age.json', 'w') as f:
-                simplejson.dump(result, f, indent=4)
-            con.commit()
+    def load_five_young_query(self):
+        with open('top_5_avg_age.json', 'w') as f:
+            simplejson.dump(self.five_young_query(), f, indent=4)
+            DataBase.con.commit()
 
-    def biggest_delta(self):
-        with con.cursor() as cursor:
-            delta = "select r.name," \
-                    " max((((YEAR(CURRENT_DATE) - YEAR(s.birthday)) - " \
-                    "(DATE_FORMAT(CURRENT_DATE, '%m%d') < DATE_FORMAT(s.birthday, '%m%d'))))) - " \
-                    "min((((YEAR(CURRENT_DATE) - YEAR(s.birthday)) - " \
-                    "(DATE_FORMAT(CURRENT_DATE, '%m%d') < DATE_FORMAT(s.birthday, '%m%d'))))) as delta " \
-                    "from hostel.rooms r join hostel.students s on r.id = s.room " \
-                    "group by r.id " \
-                    "order by delta desc, r.id " \
-                    "limit 5;"
-
+    def biggest_delta_query(self):
+        with DataBase.con.cursor() as cursor:
+            delta = mq.BIGGEST_DELTA_QR
             cursor.execute(delta)
             rows = cursor.fetchall()
-            result = dict(rows)
-            with open('biggest_delta.json', 'w') as f:
-                simplejson.dump(result, f, indent=4)
-            con.commit()
+        return dict(rows)
 
-    def different_sex_rooms(self):
-        with con.cursor() as cursor:
-            different_sex = \
-                "select" \
-                " r.name, count(DISTINCT s.sex) AS number_of_genders" \
-                " from hostel.rooms r join hostel.students s " \
-                "on r.id = s.room " \
-                "group by s.room " \
-                "having count(DISTINCT s.sex) > 1;"
+    def load_biggest_delta_query(self):
+        with open('biggest_delta.json', 'w') as f:
+            simplejson.dump(self.biggest_delta_query(), f, indent=4)
+            DataBase.con.commit()
 
+    def different_sex_rooms_query(self):
+        with DataBase.con.cursor() as cursor:
+            different_sex = mq.DIFFERENT_SEX_QR
             cursor.execute(different_sex)
             rows = cursor.fetchall()
-            result = dict(rows)
+            return dict(rows)
 
-            with open('different_sex.json', 'w') as f:
-                simplejson.dump(result, f, indent=4)
-            con.commit()
+    def load_diff_sex_query(self):
+        with open('different_sex.json', 'w') as f:
+            simplejson.dump(self.different_sex_rooms_query(), f, indent=4)
+            DataBase.con.commit()
+
+
+
+
+
 
 
 hostel = DataBase()
 
-hostel.different_sex_rooms()
-hostel.rooms_and_number_of_students()
-hostel.biggest_delta()
-hostel.five_young()
+hostel.load_diff_sex_query()
+hostel.load_rooms_and_number_of_students_query()
+hostel.load_biggest_delta_query()
+hostel.load_five_young_query()
 
 
