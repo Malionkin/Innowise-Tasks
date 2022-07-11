@@ -1,28 +1,40 @@
+import os
 from pyspark.sql import SparkSession, Window
 import pyspark.sql.functions as f
 
-spark = SparkSession.builder.getOrCreate()
+
+
+spark = SparkSession.builder\
+    .appName("pyspark")\
+    .config("spark.jars", "postgresql-42.4.0.jar")\
+    .getOrCreate()
+
+table_read = spark.read.format("jdbc") \
+    .option("url", f"jdbc:postgresql://{os.getenv('HOST')}/{os.getenv('DATABASE')}") \
+    .option("user", "postgres") \
+    .option("password", "postgres") \
+    .option("driver", 'org.postgresql.Driver')
 
 
 def read_table(table_address):
-    return spark.read.format("csv").option("header", "true").load(table_address)
+    return table_read.option("dbtable", table_address).load()
 
 
-actor = read_table("data/actor.csv")
-address = read_table("data/address.csv")
-category = read_table("data/category.csv")
-city = read_table("data/city.csv")
-country = read_table("data/country.csv")
-customer = read_table("data/customer.csv")
-film = read_table("data/film.csv")
-film_actor = read_table("data/film_actor.csv")
-film_category = read_table("data/film_category.csv")
-inventory = read_table("data/inventory.csv")
-language = read_table("data/language.csv")
-payment = read_table("data/payment.csv")
-rental = read_table("data/rental.csv")
-staff = read_table("data/staff.csv")
-store = read_table("data/store.csv")
+actor = read_table("actor")
+address = read_table("address")
+category = read_table("category")
+city = read_table("city")
+country = read_table("country")
+customer = read_table("customer")
+film = read_table("film")
+film_actor = read_table("film_actor")
+film_category = read_table("film_category")
+inventory = read_table("inventory")
+language = read_table("language")
+payment = read_table("payment")
+rental = read_table("rental")
+staff = read_table("staff")
+store = read_table("store")
 
 first_query = \
     category.join(film_category, on="category_id") \
