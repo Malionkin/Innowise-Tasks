@@ -10,7 +10,7 @@ spark = SparkSession.builder\
     .getOrCreate()
 
 table_read = spark.read.format("jdbc") \
-    .option("url", f"jdbc:postgresql://{os.getenv('HOST')}/{os.getenv('DATABASE')}") \
+    .option("url", f"jdbc:postgresql://"localhost"/"pagila_"") \
     .option("user", "postgres") \
     .option("password", "postgres") \
     .option("driver", 'org.postgresql.Driver')
